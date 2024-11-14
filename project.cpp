@@ -5,6 +5,7 @@
 #include <unordered_set> // Add this line
 #include <fstream>
 #include <limits> // Add this line
+#include <sstream> // Add this line
 using namespace std;
 
 // Base class for a user in the system
@@ -30,6 +31,9 @@ public:
 // Student class
 class Student : public User
 {
+private:
+    unordered_set<string> enrolledCourses; // New member variable
+
 public:
     Student(string u, string p) : User(u, p) {}
 
@@ -38,6 +42,34 @@ public:
         cout << "Student Menu\n";
         cout << "1. Take Quiz\n";
         cout << "2. View Scores\n";
+        cout << "3. View Enrolled Courses\n"; // New option
+        cout << "0. Logout\n";
+    }
+
+    void viewEnrolledCourses()
+    {
+        if (enrolledCourses.empty())
+        {
+            cout << "You are not enrolled in any courses.\n";
+        }
+        else
+        {
+            cout << "Enrolled Courses:\n";
+            for (const auto &course : enrolledCourses)
+            {
+                cout << "- " << course << "\n";
+            }
+        }
+    }
+
+    void addCourse(const string &course)
+    {
+        enrolledCourses.insert(course);
+    }
+
+    const unordered_set<string> &getEnrolledCourses() const
+    {
+        return enrolledCourses;
     }
 };
 
@@ -121,6 +153,8 @@ public:
             if (users.find(username) != users.end() && dynamic_cast<Student*>(users[username]))
             {
                 enrolledStudents.insert(username);
+                Student* student = dynamic_cast<Student*>(users[username]);
+                student->addCourse(subject); // Update student's enrolled courses
                 cout << "Student " << username << " enrolled successfully.\n";
             }
             else
@@ -238,9 +272,9 @@ public:
     QuizSystem()
     {
         // Initialize default users
-        users["student"] = new Student("student", "1234");
-        users["teacher"] = new Teacher("teacher", "1234", "Math"); // Include subject
-        users["admin"] = new Admin("admin", "1234");
+        // users["student"] = new Student("student", "1234");
+        // users["teacher"] = new Teacher("teacher", "1234", "Math"); // Include subject
+        // users["admin"] = new Admin("admin", "1234");
 
         // Load additional users from files
         load_data();
@@ -256,10 +290,17 @@ public:
 
         while (studentFile >> username >> password)
         {
-            if (users.find(username) == users.end())
+            Student* student = new Student(username, password);
+            // Load enrolled courses
+            string courseLine;
+            getline(studentFile, courseLine);
+            istringstream courseStream(courseLine);
+            string course;
+            while (courseStream >> course)
             {
-                users[username] = new Student(username, password);
+                student->addCourse(course);
             }
+            users[username] = student;
         }
 
         while (teacherFile >> username >> password >> subject)
@@ -369,7 +410,22 @@ public:
                 }
                 else if (Student* student = dynamic_cast<Student*>(user))
                 {
-                    // Handle student options
+                    if (choice == 1)
+                    {
+                        // Handle student options
+                    }
+                    else if (choice == 2)
+                    {
+                        // Handle student options
+                    }
+                    else if (choice == 3)
+                    {
+                        student->viewEnrolledCourses(); // New option
+                    }
+                    else
+                    {
+                        cout << "Invalid choice.\n";
+                    }
                 }
             }
             else
@@ -394,11 +450,17 @@ public:
             string username = userPair.first;
             string password = user->getPassword();
 
-            if (dynamic_cast<Student *>(user))
+            if (Student* student = dynamic_cast<Student*>(user))
             {
-                studentFile << username << " " << password << endl;
+                studentFile << username << " " << password;
+                // Save enrolled courses
+                for (const auto &course : student->getEnrolledCourses())
+                {
+                    studentFile << " " << course;
+                }
+                studentFile << endl;
             }
-            else if (dynamic_cast<Teacher *>(user))
+            else if (Teacher* teacher = dynamic_cast<Teacher*>(user))
             {
                 teacherFile << username << " " << password << " " << dynamic_cast<Teacher*>(user)->getSubject() << " ";
                 dynamic_cast<Teacher*>(user)->saveEnrolledStudents(teacherFile); // Save enrolled students

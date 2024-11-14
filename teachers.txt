@@ -1,2 +1,2 @@
-teacher2 12345 science 
-teacher 1234 Math student2 
+teacher 12345 math 
+teacher2 12345 sci student2 

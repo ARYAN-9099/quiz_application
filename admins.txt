@@ -1,2 +1,1 @@
-admin2 12345
-admin 1234
+admin 12345
