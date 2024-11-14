@@ -2,7 +2,9 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set> // Add this line
 #include <fstream>
+#include <limits> // Add this line
 using namespace std;
 
 // Base class for a user in the system
@@ -44,16 +46,22 @@ class Teacher : public User
 {
 private:
     unordered_map<string, vector<pair<string, string>>> quizzes; // Quiz title -> list of <question, answer> pairs
+    string subject; // New member variable
+    unordered_set<string> enrolledStudents; // New member variable
 
 public:
-    Teacher(string u, string p) : User(u, p) {}
+    Teacher(string u, string p, string s) : User(u, p), subject(s) {}
+
+    string getSubject() const { return subject; } // Getter for subject
 
     void menu() override
     {
-        cout << "Teacher Menu\n";
+        cout << "Teacher Menu (" << subject << ")\n"; // Display subject
         cout << "1. Create Quiz\n";
         cout << "2. View Created Quizzes\n";
-        cout << "3. Add Student\n"; // New option added
+        cout << "3. Enroll Student\n"; // Updated option
+        cout << "4. View Enrolled Students\n"; // New option
+        cout << "0. Logout\n"; // Add logout option
     }
 
     void createQuiz()
@@ -101,6 +109,105 @@ public:
         }
     }
 
+    void enrollStudent(unordered_map<string, User*>& users)
+    {
+        string username;
+        cout << "Enter student username to enroll: ";
+        cin >> username;
+
+        if (enrolledStudents.find(username) == enrolledStudents.end())
+        {
+            // Check if the student exists
+            if (users.find(username) != users.end() && dynamic_cast<Student*>(users[username]))
+            {
+                enrolledStudents.insert(username);
+                cout << "Student " << username << " enrolled successfully.\n";
+            }
+            else
+            {
+                cout << "Student does not exist.\n";
+            }
+        }
+        else
+        {
+            cout << "Student already enrolled.\n";
+        }
+    }
+
+    void viewEnrolledStudents()
+    {
+        if (enrolledStudents.empty())
+        {
+            cout << "No students enrolled yet.\n";
+            return;
+        }
+        cout << "Enrolled Students:\n";
+        for (const auto &student : enrolledStudents)
+        {
+            cout << student << "\n";
+        }
+    }
+
+    void saveEnrolledStudents(ofstream &file) const
+    {
+        for (const auto &student : enrolledStudents)
+        {
+            file << student << " ";
+        }
+        file << endl;
+    }
+
+    void loadEnrolledStudents(ifstream &file)
+    {
+        string student;
+        while (file >> student)
+        {
+            enrolledStudents.insert(student);
+        }
+    }
+};
+
+// Admin class with additional admin functionalities
+class Admin : public User
+{
+public:
+    Admin(string u, string p) : User(u, p) {}
+
+    void menu() override
+    {
+        cout << "Admin Menu\n";
+        cout << "1. Manage Users\n";
+        cout << "2. Add New Teacher\n";
+        cout << "3. Add New Student\n"; // New option added
+        cout << "0. Logout\n"; // Add logout option
+    }
+
+    void manageUsers()
+    {
+        // Existing manage users functionality
+    }
+
+    void addTeacher(unordered_map<string, User *> &users)
+    {
+        string username, password, subject;
+        cout << "Enter new teacher username: ";
+        cin >> username;
+        cout << "Enter new teacher password: ";
+        cin >> password;
+        cout << "Enter subject for teacher: ";
+        cin >> subject; // New input
+
+        if (users.find(username) == users.end())
+        {
+            users[username] = new Teacher(username, password, subject); // Include subject
+            cout << "New teacher added successfully.\n";
+        }
+        else
+        {
+            cout << "User already exists.\n";
+        }
+    }
+
     void addStudent(unordered_map<string, User*>& users)
     {
         string username, password;
@@ -121,44 +228,6 @@ public:
     }
 };
 
-// Admin class with additional admin functionalities
-class Admin : public User
-{
-public:
-    Admin(string u, string p) : User(u, p) {}
-
-    void menu() override
-    {
-        cout << "Admin Menu\n";
-        cout << "1. Manage Users\n";
-        cout << "2. Add New Teacher\n";
-    }
-
-    void manageUsers()
-    {
-        // Existing manage users functionality
-    }
-
-    void addTeacher(unordered_map<string, User *> &users)
-    {
-        string username, password;
-        cout << "Enter new teacher username: ";
-        cin >> username;
-        cout << "Enter new teacher password: ";
-        cin >> password;
-
-        if (users.find(username) == users.end())
-        {
-            users[username] = new Teacher(username, password);
-            cout << "New teacher added successfully.\n";
-        }
-        else
-        {
-            cout << "User already exists.\n";
-        }
-    }
-};
-
 // Main Quiz System class
 class QuizSystem
 {
@@ -170,7 +239,7 @@ public:
     {
         // Initialize default users
         users["student"] = new Student("student", "1234");
-        users["teacher"] = new Teacher("teacher", "1234");
+        users["teacher"] = new Teacher("teacher", "1234", "Math"); // Include subject
         users["admin"] = new Admin("admin", "1234");
 
         // Load additional users from files
@@ -183,7 +252,7 @@ public:
         ifstream teacherFile("teachers.txt");
         ifstream adminFile("admins.txt");
 
-        string username, password;
+        string username, password, subject;
 
         while (studentFile >> username >> password)
         {
@@ -193,11 +262,13 @@ public:
             }
         }
 
-        while (teacherFile >> username >> password)
+        while (teacherFile >> username >> password >> subject)
         {
             if (users.find(username) == users.end())
             {
-                users[username] = new Teacher(username, password);
+                Teacher *teacher = new Teacher(username, password, subject);
+                teacher->loadEnrolledStudents(teacherFile); // Load enrolled students
+                users[username] = teacher;
             }
         }
 
@@ -239,50 +310,74 @@ public:
         }
     }
 
-    void displayMenu(User *user)
+    void displayMenu(User* user)
     {
-        user->menu();
         int choice;
-        cout << "Enter choice: ";
-        cin >> choice;
+        while (true)
+        {
+            user->menu();
+            cout << "Enter choice: ";
+            if (cin >> choice)
+            {
+                if (choice == 0)
+                {
+                    cout << "Logging out...\n";
+                    break;
+                }
 
-        if (Teacher* teacher = dynamic_cast<Teacher*>(user))
-        {
-            if (choice == 1)
-            {
-                teacher->createQuiz();
-            }
-            else if (choice == 2)
-            {
-                teacher->viewQuizzes();
-            }
-            else if (choice == 3)
-            {
-                teacher->addStudent(users); // Pass users map
+                if (Teacher* teacher = dynamic_cast<Teacher*>(user))
+                {
+                    if (choice == 1)
+                    {
+                        teacher->createQuiz();
+                    }
+                    else if (choice == 2)
+                    {
+                        teacher->viewQuizzes();
+                    }
+                    else if (choice == 3)
+                    {
+                        teacher->enrollStudent(users); // Pass users map
+                    }
+                    else if (choice == 4)
+                    {
+                        teacher->viewEnrolledStudents(); // New option
+                    }
+                    else
+                    {
+                        cout << "Invalid choice.\n";
+                    }
+                }
+                else if (Admin* admin = dynamic_cast<Admin*>(user))
+                {
+                    if (choice == 1)
+                    {
+                        admin->manageUsers();
+                    }
+                    else if (choice == 2)
+                    {
+                        admin->addTeacher(users);
+                    }
+                    else if (choice == 3)
+                    {
+                        admin->addStudent(users);
+                    }
+                    else
+                    {
+                        cout << "Invalid choice.\n";
+                    }
+                }
+                else if (Student* student = dynamic_cast<Student*>(user))
+                {
+                    // Handle student options
+                }
             }
             else
             {
-                cout << "Invalid choice.\n";
-            }
-        }
-        else if (dynamic_cast<Student *>(user))
-        {
-            // Handle student options
-        }
-        else if (dynamic_cast<Admin *>(user))
-        {
-            Admin *admin = dynamic_cast<Admin *>(user);
-            if (choice == 1)
-            {
-                admin->manageUsers();
-            }
-            else if (choice == 2)
-            {
-                admin->addTeacher(users);
-            }
-            else
-            {
-                cout << "Invalid choice.\n";
+                // Handle invalid input
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Invalid input. Please enter a number.\n";
             }
         }
     }
@@ -305,7 +400,8 @@ public:
             }
             else if (dynamic_cast<Teacher *>(user))
             {
-                teacherFile << username << " " << password << endl;
+                teacherFile << username << " " << password << " " << dynamic_cast<Teacher*>(user)->getSubject() << " ";
+                dynamic_cast<Teacher*>(user)->saveEnrolledStudents(teacherFile); // Save enrolled students
             }
             else if (dynamic_cast<Admin *>(user))
             {
@@ -330,20 +426,28 @@ int main()
         cout << "1. Login\n";
         cout << "2. Exit\n";
         cout << "Enter choice: ";
-        cin >> choice;
-
-        if (choice == 1)
+        if (cin >> choice)
         {
-            system.login();
-        }
-        else if (choice == 2)
-        {
-            system.save_data();
-            break;
+            if (choice == 1)
+            {
+                system.login();
+            }
+            else if (choice == 2)
+            {
+                system.save_data();
+                break;
+            }
+            else
+            {
+                cout << "Invalid choice. Try again.\n";
+            }
         }
         else
         {
-            cout << "Invalid choice. Try again.\n";
+            // Invalid input encountered
+            cin.clear(); // Clear error flags
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Discard invalid input
+            cout << "Invalid input. Please enter a number.\n";
         }
     }
     return 0;
