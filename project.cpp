@@ -53,6 +53,7 @@ public:
         cout << "Teacher Menu\n";
         cout << "1. Create Quiz\n";
         cout << "2. View Created Quizzes\n";
+        cout << "3. Add Student\n"; // New option added
     }
 
     void createQuiz()
@@ -97,6 +98,25 @@ public:
                 cout << "Q: " << qa.first << " | A: " << qa.second << "\n";
             }
             cout << "-------------------\n";
+        }
+    }
+
+    void addStudent(unordered_map<string, User*>& users)
+    {
+        string username, password;
+        cout << "Enter new student username: ";
+        cin >> username;
+        cout << "Enter new student password: ";
+        cin >> password;
+
+        if (users.find(username) == users.end())
+        {
+            users[username] = new Student(username, password);
+            cout << "New student added successfully.\n";
+        }
+        else
+        {
+            cout << "User already exists.\n";
         }
     }
 };
@@ -226,9 +246,8 @@ public:
         cout << "Enter choice: ";
         cin >> choice;
 
-        if (dynamic_cast<Teacher *>(user))
+        if (Teacher* teacher = dynamic_cast<Teacher*>(user))
         {
-            Teacher *teacher = dynamic_cast<Teacher *>(user);
             if (choice == 1)
             {
                 teacher->createQuiz();
@@ -236,6 +255,10 @@ public:
             else if (choice == 2)
             {
                 teacher->viewQuizzes();
+            }
+            else if (choice == 3)
+            {
+                teacher->addStudent(users); // Pass users map
             }
             else
             {
