@@ -2,15 +2,43 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <unordered_set> // Add this line
+#include <unordered_set>
 #include <fstream>
-#include <limits> // Add this line
-#include <sstream> // Add this line
+#include <limits>
+#include <sstream>
 using namespace std;
 
-// Base class for a user in the system
-class User
-{
+// Global variable to store quizzes
+unordered_map<string, vector<pair<string, pair<vector<string>, int>>>> quizzes; // Moved outside of any class
+
+// Function to display a quiz in a text file
+void displayQuiz(const string& quizTitle, const string& filename) {
+    if (quizzes.find(quizTitle) == quizzes.end()) {
+        cout << "Quiz not found!\n";
+        return;
+    }
+
+    ofstream outfile(filename);
+    if (!outfile.is_open()) {
+        cout << "Error opening file: " << filename << endl;
+        return;
+    }
+
+    const auto& questions = quizzes[quizTitle];
+    for (size_t i = 0; i < questions.size(); ++i) {
+        outfile << "Q" << i + 1 << ": " << questions[i].first << endl;
+        const auto& options = questions[i].second.first;
+        for (size_t j = 0; j < options.size(); ++j) {
+            outfile << j + 1 << ". " << options[j] << endl;
+        }
+        outfile << endl;
+    }
+
+    outfile.close();
+    cout << "Quiz displayed in file: " << filename << endl;
+}
+
+class User {
 protected:
     string username;
     string password;
@@ -29,101 +57,223 @@ public:
 virtual ~User() {}// Added function
 // Added function
 };
-
-// Student class
-class Student : public User
-{
+class Student : public User {
 private:
     unordered_set<string> enrolledCourses; // New member variable
 
 public:
     Student(string u, string p) : User(u, p) {}
 
-    void menu() override
-    {
+    void menu() override {
         cout << "Student Menu\n";
         cout << "1. Take Quiz\n";
         cout << "2. View Scores\n";
         cout << "3. View Enrolled Courses\n"; // New option
+        cout << "4. Display Quiz\n"; // New option
         cout << "0. Logout\n";
     }
 
-    void viewEnrolledCourses()
-    {
-        if (enrolledCourses.empty())
-        {
+    void viewEnrolledCourses() {
+        if (enrolledCourses.empty()) {
             cout << "You are not enrolled in any courses.\n";
-        }
-        else
-        {
+        } else {
             cout << "Enrolled Courses:\n";
-            for (const auto &course : enrolledCourses)
-            {
+            for (const auto &course : enrolledCourses) {
                 cout << "- " << course << "\n";
             }
         }
     }
 
-    void addCourse(const string &course)
-    {
+    void addCourse(const string &course) {
         enrolledCourses.insert(course);
     }
 
-    const unordered_set<string> &getEnrolledCourses() const
-    {
+    const unordered_set<string> &getEnrolledCourses() const {
         return enrolledCourses;
     }
-};
 
-// Teacher class with ability to create quizzes
-class Teacher : public User
-{
+    void displayQuiz(const string& quizTitle) {
+        // Pass the 'quizzes' map from the QuizSystem
+        ::displayQuiz(quizTitle, quizTitle + ".txt"); // Use the external function
+    }
+
+    // Function to take a quiz 
+void takeQuiz(const string& quizTitle, unordered_map<string, User*>& users) {
+    if (quizzes.find(quizTitle) == quizzes.end()) {
+        cout << "Quiz not found!\n";
+        return;
+    }
+
+    const auto& questions = quizzes[quizTitle];
+    vector<int> answers; // Store the user's answers
+    int score = 0; // Initialize score
+
+    for (size_t i = 0; i < questions.size(); ++i) {
+        cout << "Q" << i + 1 << ": " << questions[i].first << endl;
+        const auto& options = questions[i].second.first;
+        for (size_t j = 0; j < options.size(); ++j) {
+            cout << j + 1 << ". " << options[j] << endl;
+        }
+
+        int choice;
+        cout << "Enter your choice: ";
+        cin >> choice;
+        cin.ignore();
+
+        // Validate input
+        if (choice < 1 || choice > options.size()) {
+            cout << "Invalid choice. Please enter a valid option number." << endl;
+            --i; // Repeat the question
+            continue;
+        }
+
+        answers.push_back(choice);
+        if (choice - 1 == questions[i].second.second) {
+            score+=4;
+        }
+        else{
+            score-=1;
+        }
+    }
+
+    string studentFile = "students.txt"; 
+    ofstream file(studentFile, ios::app);
+
+    if (file.is_open()) {
+        file << "Quiz: " << quizTitle << endl;
+        file << "Answers: ";
+        for (const auto& answer : answers) {
+            file << answer << " , ";
+        }
+        file << endl;
+        file << "Score: " << score << "/" << questions.size()*4 << endl;
+        ofstream student("students.txt", ios::app);
+        
+        file.close();
+    } else {
+        cout << "Error opening student file for saving data.\n";
+    }
+
+    cout << "You scored " << score << " out of " << questions.size() *4<< " in the quiz.\n";
+}
+
+};
+class Teacher : public User {
 private:
-    unordered_map<string, vector<pair<string, string>>> quizzes; // Quiz title -> list of <question, answer> pairs
-    string subject; // New member variable
-    unordered_set<string> enrolledStudents; // New member variable
+    // Quiz data: quiz title -> list of <question, <options, correct option index>>
+    // unordered_map<string, vector<pair<string, pair<vector<string>, int>>>> quizzes;
+    string subject; // Subject taught by the teacher
+    unordered_set<string> enrolledStudents; // List of enrolled students
 
 public:
     Teacher(string u, string p, string s) : User(u, p), subject(s) {}
 
-    string getSubject() const { return subject; } // Getter for subject
+    string getSubject() const { return subject; }
 
-    void menu() override
-    {
-        cout << "Teacher Menu (" << subject << ")\n"; // Display subject
+    void menu() override {
+        cout << "Teacher Menu (" << subject << ")\n";
         cout << "1. Create Quiz\n";
         cout << "2. View Created Quizzes\n";
-        cout << "3. Enroll Student\n"; // Updated option
-        cout << "4. View Enrolled Students\n"; // New option
-        cout << "0. Logout\n"; // Add logout option
+        cout << "3. Enroll Student\n";
+        cout << "4. View Enrolled Students\n";
+        cout << "0. Logout\n";
     }
 
-    void createQuiz()
+void createQuiz()
+{
+    string quizTitle;
+    cout << "Enter quiz title: ";
+    cin.ignore();
+    getline(cin, quizTitle);
+
+    string quizType;
+    // Prompt for quiz type until valid input is received
+    while (true) {
+        cout << "Enter quiz type (SCQ/MCQ): ";
+        cin >> quizType;
+        cin.ignore(); // Consume newline
+
+        if (quizType == "SCQ" || quizType == "MCQ") {
+            break; // Exit the loop if valid input is received
+        } else {
+            cout << "Invalid quiz type. Please enter SCQ or MCQ.\n";
+        }
+    }
+
+    vector<pair<string, pair<vector<string>, int>>> questions;
+    int numQuestions;
+    cout << "Enter number of questions: ";
+    cin >> numQuestions;
+    cin.ignore();
+
+    for (int i = 0; i < numQuestions; ++i)
     {
-        string quizTitle;
-        cout << "Enter quiz title: ";
-        cin.ignore();
-        getline(cin, quizTitle);
+        string question;
+        cout << "Enter question " << i + 1 << ": ";
+        getline(cin, question);
 
-        vector<pair<string, string>> questions;
-        int numQuestions;
-        cout << "Enter number of questions: ";
-        cin >> numQuestions;
-        cin.ignore();
-
-        for (int i = 0; i < numQuestions; ++i)
+        vector<string> options;
+        // Always 4 options
+        for (int j = 0; j < 4; ++j)
         {
-            string question, answer;
-            cout << "Enter question " << i + 1 << ": ";
-            getline(cin, question);
-            cout << "Enter answer for question " << i + 1 << ": ";
-            getline(cin, answer);
-            questions.push_back({question, answer});
+            string option;
+            cout << "Enter option " << j + 1 << ": ";
+            getline(cin, option);
+            options.push_back(option);
         }
 
-        quizzes[quizTitle] = questions;
-        cout << "Quiz \"" << quizTitle << "\" created successfully.\n";
+        int correctOption;
+        if (quizType == "SCQ")
+        {
+            cout << "Enter the correct option number (1): ";
+            cin >> correctOption;
+            cin.ignore();
+
+            // Validate input for SCQ (always 1 for SCQ)
+            if (correctOption > 4 || correctOption<1)
+            {
+                cout << "Invalid correct option for SCQ. Please re-enter the question.\n";
+                --i;
+                continue;
+            }
+        }
+        if (quizType == "MCQ")
+        {
+
+
+            // Validate input for MCQ
+
+            int number;
+            cout<<"Enter the number of options for this question: ";
+            cin >> number;
+            for (int i=0;i<number;i++){
+                int correct;
+                cout << "Enter the correct option number (1 to 4): ";
+                cin >> correct;
+                if (correct < 1 || correct > 4)
+                {
+                    cout << "Invalid correct option. Please re-enter the question.\n";
+                number+=1;
+                    continue;
+                }
+                if (i==0){
+                    correctOption=correct;
+                }
+                else{
+                    correctOption*=10;
+                    correctOption+=correct;
+                }
+                cin.ignore();
+            }
+        }
+
+        // Adjust correct option index for vector
+        questions.push_back({question, {options, correctOption - 1}});
     }
+
+    quizzes[quizTitle] = questions;
+    cout << "Quiz \"" << quizTitle << "\" created successfully.\n";
+}
 
     void viewQuizzes()
     {
@@ -132,14 +282,21 @@ public:
             cout << "No quizzes created yet.\n";
             return;
         }
-        for (const auto &quiz : quizzes)
+
+        for (const auto& quiz : quizzes)
         {
             cout << "Quiz: " << quiz.first << "\n";
-            for (const auto &qa : quiz.second)
+            for (const auto& q : quiz.second)
             {
-                cout << "Q: " << qa.first << " | A: " << qa.second << "\n";
+                cout << "Q: " << q.first << "\n";
+                const auto& options = q.second.first;
+                for (size_t i = 0; i < options.size(); ++i)
+                {
+                    cout << i + 1 << ". " << options[i] << "\n";
+                }
+                cout << "Correct Option: " << q.second.second + 1 << "\n";
+                cout << "-------------------\n";
             }
-            cout << "-------------------\n";
         }
     }
 
@@ -151,7 +308,6 @@ public:
 
         if (enrolledStudents.find(username) == enrolledStudents.end())
         {
-            // Check if the student exists
             if (users.find(username) != users.end() && dynamic_cast<Student*>(users[username]))
             {
                 enrolledStudents.insert(username);
@@ -177,23 +333,24 @@ public:
             cout << "No students enrolled yet.\n";
             return;
         }
+
         cout << "Enrolled Students:\n";
-        for (const auto &student : enrolledStudents)
+        for (const auto& student : enrolledStudents)
         {
             cout << student << "\n";
         }
     }
 
-    void saveEnrolledStudents(ofstream &file) const
+    void saveEnrolledStudents(ofstream& file) const
     {
-        for (const auto &student : enrolledStudents)
+        for (const auto& student : enrolledStudents)
         {
             file << student << " ";
         }
         file << endl;
     }
 
-    void loadEnrolledStudents(ifstream &file)
+    void loadEnrolledStudents(ifstream& file)
     {
         string student;
         while (file >> student)
@@ -202,8 +359,6 @@ public:
         }
     }
 };
-
-// Admin class with additional admin functionalities
 class Admin : public User
 {
 public:
@@ -263,13 +418,12 @@ public:
         }
     }
 };
-
-// Main Quiz System class
 class QuizSystem
 {
 private:
     unordered_map<string, User *> users;
-
+    // public:
+    // unordered_map<string, vector<pair<string, pair<vector<string>, int>>>> quizzes;
 public:
     QuizSystem()
     {
@@ -414,7 +568,11 @@ public:
                 {
                     if (choice == 1)
                     {
-                        // Handle student options
+                        string quizTitle;
+                        cout << "Enter the quiz title: ";
+                        cin.ignore();
+                        getline(cin, quizTitle);
+                        student->takeQuiz(quizTitle, users);
                     }
                     else if (choice == 2)
                     {
@@ -423,6 +581,14 @@ public:
                     else if (choice == 3)
                     {
                         student->viewEnrolledCourses(); // New option
+                    }
+                    else if (choice == 4)
+                    {
+                        string quizTitle;
+                        cout << "Enter the quiz title to display: ";
+                        cin.ignore();
+                        getline(cin, quizTitle);
+                        student->displayQuiz(quizTitle);
                     }
                     else
                     {
@@ -440,45 +606,39 @@ public:
         }
     }
 
-    void save_data()
-    {
-        ofstream studentFile("students.txt");
-        ofstream teacherFile("teachers.txt");
-        ofstream adminFile("admins.txt");
+void save_data() {
+    ofstream studentFile("students.txt");
+    ofstream teacherFile("teachers.txt");
+    ofstream adminFile("admins.txt");
 
-        for (const auto &userPair : users)
-        {
-            User *user = userPair.second;
-            string username = userPair.first;
-            string password = user->getPassword();
+    for (const auto &userPair : users) {
+        User *user = userPair.second;
+        string username = userPair.first;
+        string password = user->getPassword();
 
-            if (Student* student = dynamic_cast<Student*>(user))
-            {
-                studentFile << username << " " << password;
-                // Save enrolled courses
-                for (const auto &course : student->getEnrolledCourses())
-                {
-                    studentFile << " " << course;
-                }
-                studentFile << endl;
+        if (Student* student = dynamic_cast<Student*>(user)) {
+            studentFile << username << " " << password;
+            // Save enrolled courses
+            for (const auto &course : student->getEnrolledCourses()) {
+                studentFile << " " << course;
             }
-            else if (Teacher* teacher = dynamic_cast<Teacher*>(user))
-            {
-                teacherFile << username << " " << password << " " << dynamic_cast<Teacher*>(user)->getSubject() << " ";
-                dynamic_cast<Teacher*>(user)->saveEnrolledStudents(teacherFile); // Save enrolled students
-            }
-            else if (dynamic_cast<Admin *>(user))
-            {
-                adminFile << username << " " << password << endl;
-            }
+            studentFile << endl;
         }
-
-        studentFile.close();
-        teacherFile.close();
-        adminFile.close();
+        else if (Teacher* teacher = dynamic_cast<Teacher*>(user)) {
+            teacherFile << username << " " << password << " " << dynamic_cast<Teacher*>(user)->getSubject() << " ";
+            dynamic_cast<Teacher*>(user)->saveEnrolledStudents(teacherFile); // Save enrolled students
+        }
+        else if (dynamic_cast<Admin *>(user)) {
+            adminFile << username << " " << password << endl;
+        }
     }
-};
 
+    studentFile.close();
+    teacherFile.close();
+    adminFile.close();
+}
+
+};
 int main()
 {
     QuizSystem system;
