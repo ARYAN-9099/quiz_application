@@ -25,7 +25,9 @@ public:
 
     virtual void menu() = 0; // Pure virtual function for role-specific menus
 
-    string getPassword() const { return password; } // Added function
+    string getPassword() const { return password; } 
+virtual ~User() {}// Added function
+// Added function
 };
 
 // Student class
@@ -347,7 +349,7 @@ public:
         }
         else
         {
-            cout << "Invalid credentials.\n";
+            cout << " credentials.\n";
         }
     }
 
