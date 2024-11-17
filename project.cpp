@@ -60,6 +60,7 @@ public:
 class Student : public User {
 private:
   unordered_set<string> enrolledCourses; // New member variable
+  unordered_map<string, int> scores; //  To store scores for each quiz
 
 public:
   Student(string u, string p) : User(u, p) {}
@@ -193,8 +194,22 @@ void takeQuiz(const string &quizTitle, unordered_map<string, User *> &users) {
 
     cout << "You scored " << totalScore << " out of " << questions.size() * 4
          << " in the quiz.\n";
+
+    // Save the score in the student's scores map
+    scores[quizTitle] = totalScore; 
 }
 
+  // Function to view scores
+  void viewScores() {
+    if (scores.empty()) {
+      cout << "You haven't taken any quizzes yet.\n";
+    } else {
+      cout << "Your Scores:\n";
+      for (const auto &scorePair : scores) {
+        cout << scorePair.first << ": " << scorePair.second << endl;
+      }
+    }
+  }
 };
 class Teacher : public User {
 private:
@@ -539,7 +554,7 @@ public:
             getline(cin, quizTitle);
             student->takeQuiz(quizTitle, users);
           } else if (choice == 2) {
-            // Handle student options
+            student->viewScores(); // View scores
           } else if (choice == 3) {
             student->viewEnrolledCourses(); // New option
           } else if (choice == 4) {
