@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <windows.h>
 using namespace std;
 
 // Global variable to store quizzes
@@ -230,6 +231,7 @@ public:
     cout << "2. View Created Quizzes\n";
     cout << "3. Enroll Student\n";
     cout << "4. View Enrolled Students\n";
+    cout << "5. Create Quiz with AI\n"; // New option
     cout << "0. Logout\n";
   }
 
@@ -386,6 +388,79 @@ public:
       enrolledStudents.insert(student);
     }
   }
+
+  void createQuizWithAI() {
+    string subject;
+    int numQuestions;
+    cout << "Enter subject for the quiz: ";
+    cin.ignore();
+    getline(cin, subject);
+    cout << "Enter number of questions: ";
+    cin >> numQuestions;
+    cin.ignore();
+
+    ofstream outfile("quiz_with_ai_input.txt");
+    if (!outfile.is_open()) {
+      cout << "Error opening file for writing.\n";
+      return;
+    }
+
+    outfile << subject << " " << numQuestions << endl;
+    
+    outfile.close();
+
+    Sleep(8000);
+
+    // Read quiz data from "quiz_with_ai_output.txt"
+    ifstream infile("quiz_with_ai_output.txt");
+    if (!infile.is_open()) {
+        cout << "Error opening file for reading.\n";
+        return;
+    }
+
+    vector<pair<string, pair<vector<string>, int>>> questions;
+    string line;
+    while (getline(infile, line)) {
+        if (line.empty()) continue; // Skip empty lines
+
+        string question = line;
+        vector<string> options;
+
+        // Read 4 options
+        for (int i = 0; i < 4; ++i) {
+            if (!getline(infile, line) || line.empty()) {
+                cout << "Invalid format in quiz file.\n";
+                infile.close();
+                return;
+            }
+            options.push_back(line);
+        }
+
+        // Read the correct option
+        while (getline(infile, line)) {
+            if (line.empty()) continue; // Skip empty lines
+            try {
+                int correctOption = stoi(line);
+                questions.push_back({question, {options, correctOption - 1}});
+                break;
+            } catch (const invalid_argument &) {
+                cout << "Invalid correct option in quiz file.\n";
+                infile.close();
+                return;
+            }
+        }
+    }
+    infile.close();
+
+    // Prompt for quiz title
+    string quizTitle;
+    cout << "Enter quiz title: ";
+    getline(cin, quizTitle);
+
+    // Add the new quiz to the quizzes map
+    quizzes[quizTitle] = questions;
+    cout << "Quiz \"" << quizTitle << "\" created successfully using AI.\n";
+}
 };
 class Admin : public User {
 public:
@@ -533,6 +608,8 @@ public:
             teacher->enrollStudent(users); // Pass users map
           } else if (choice == 4) {
             teacher->viewEnrolledStudents(); // New option
+          } else if (choice == 5) {
+            teacher->createQuizWithAI(); // New option handling
           } else {
             cout << "Invalid choice.\n";
           }
