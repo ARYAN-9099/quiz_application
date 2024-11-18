@@ -40,6 +40,66 @@ void displayQuiz(const string &quizTitle, const string &filename) {
   cout << "Quiz displayed in file: " << filename << endl;
 }
 
+// Function to save quizzes to a file
+void save_quizzes() {
+    ofstream quizFile("quizzes.txt");
+    if (!quizFile.is_open()) {
+        cout << "Error opening quizzes file for writing.\n";
+        return;
+    }
+
+    for (const auto &quizPair : quizzes) {
+        quizFile << quizPair.first << endl; // Quiz title
+        quizFile << quizPair.second.size() << endl; // Number of questions
+        for (const auto &questionPair : quizPair.second) {
+            quizFile << questionPair.first << endl; // Question text
+            const auto &options = questionPair.second.first;
+            for (const auto &option : options) {
+                quizFile << option << endl; // Each option
+            }
+            quizFile << questionPair.second.second << endl; // Correct option(s)
+        }
+    }
+    quizFile.close();
+}
+
+// Function to load quizzes from a file
+void load_quizzes() {
+    ifstream quizFile("quizzes.txt");
+    if (!quizFile.is_open()) {
+        cout << "No quizzes found to load.\n";
+        return;
+    }
+
+    string quizTitle;
+    while (getline(quizFile, quizTitle)) {
+        int numQuestions;
+        quizFile >> numQuestions;
+        quizFile.ignore(); // Ignore the newline after the number
+        vector<pair<string, pair<vector<string>, int>>> questions;
+
+        for (int i = 0; i < numQuestions; ++i) {
+            string questionText;
+            getline(quizFile, questionText);
+
+            vector<string> options;
+            for (int j = 0; j < 4; ++j) {
+                string option;
+                getline(quizFile, option);
+                options.push_back(option);
+            }
+
+            int correctOption;
+            quizFile >> correctOption;
+            quizFile.ignore(); // Ignore the newline after the number
+
+            questions.push_back({questionText, {options, correctOption}});
+        }
+        quizzes[quizTitle] = questions;
+    }
+    quizFile.close();
+}
+
 class User {
 protected:
   string username;
@@ -508,7 +568,7 @@ public:
       users[username] = new Student(username, password);
       cout << "New student added successfully.\n";
     } else {
-      cout << "User already exists.\n";
+      cout << "User already exists.\n"; 
     }
   }
 };
@@ -687,30 +747,32 @@ public:
   }
 };
 int main() {
-  QuizSystem system;
-  int choice;
-  while (true) {
-    cout << "-------------------\n";
-    cout << "Quiz Management System\n";
-    cout << "1. Login\n";
-    cout << "2. Exit\n";
-    cout << "Enter choice: ";
-    if (cin >> choice) {
-      if (choice == 1) {
-        system.login();
-      } else if (choice == 2) {
-        system.save_data();
-        break;
-      } else {
-        cout << "Invalid choice. Try again.\n";
-      }
-    } else {
-      // Invalid input encountered
-      cin.clear(); // Clear error flags
-      cin.ignore(numeric_limits<streamsize>::max(),
-                 '\n'); // Discard invalid input
-      cout << "Invalid input. Please enter a number.\n";
+    load_quizzes();
+    QuizSystem system;
+    int choice;
+    while (true) {
+        cout << "-------------------\n";
+        cout << "Quiz Management System\n";
+        cout << "1. Login\n";
+        cout << "2. Exit\n";
+        cout << "Enter choice: ";
+        if (cin >> choice) {
+            if (choice == 1) {
+                system.login();
+            } else if (choice == 2) {
+                system.save_data();
+                save_quizzes();
+                break;
+            } else {
+                cout << "Invalid choice. Try again.\n";
+            }
+        } else {
+            // Invalid input encountered
+            cin.clear(); // Clear error flags
+            cin.ignore(numeric_limits<streamsize>::max(),
+                       '\n'); // Discard invalid input
+            cout << "Invalid input. Please enter a number.\n";
+        }
     }
-  }
-  return 0;
+    return 0;
 }
