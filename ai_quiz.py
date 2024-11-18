@@ -43,8 +43,15 @@ def process_response(response_text):
                 answer = line.strip().split('correct:')[1].strip()
             elif line.strip().startswith('correct Answer:'):
                 answer = line.strip().split('correct Answer:')[1].strip()
+            elif line.startswith('Correct Option:'):
+                answer = line.split('Correct Option:')[1].strip()
+            elif line.startswith('Correct option:'):
+                answer = line.split('Correct option:')[1].strip()
+            elif line.startswith('correct option:'):
+                answer = line.split('correct option:')[1].strip()
             elif line.strip().startswith('**'):
                 answer = line.strip().split('**')[1].strip()
+            
             
         
         quiz_data.append({
@@ -124,9 +131,9 @@ def AI_quiz_maker_loop():
             # search_single_song(query)
             
             print(query)
-            subject = query.split(" ")[0].strip()
+            subject = query.split("\n")[0].strip()
             print(subject)
-            no_of_questions = query.split(" ")[1].strip()
+            no_of_questions = query.split("\n")[1].strip()
             print(no_of_questions)
 
             # AI logic to generate quiz

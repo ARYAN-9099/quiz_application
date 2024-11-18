@@ -405,7 +405,8 @@ public:
       return;
     }
 
-    outfile << subject << " " << numQuestions << endl;
+    outfile << subject << endl;
+    outfile << numQuestions << endl;
     
     outfile.close();
 

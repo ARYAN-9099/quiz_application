@@ -1,2 +1,2 @@
+student 12345 math
 student2 12345 sci
-student 12345
