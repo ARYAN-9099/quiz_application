@@ -191,24 +191,37 @@ void takeQuiz(const string &quizTitle, unordered_map<string, User *> &users) {
         vector<int> currentAnswers; // User's answers for this question
         int attempts;
         if (correctAnswers.size() > 1) {
-            cout << "This is a multiple-correct question. How many attempts would you like to make? ";
-            cin >> attempts;
-            cin.ignore();
+            while (true) {
+                cout << "This is a multiple-correct question. How many attempts would you like to make? ";
+                try {
+                    cin >> attempts;
+                    if (cin.fail() || attempts < 1)
+                        throw invalid_argument("Invalid input");
+                    break;
+                } catch (const invalid_argument&) {
+                    cout << "Invalid input. Please enter a valid number.\n";
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
+            }
         } else {
             attempts = 1; // Single correct answer means only one attempt
         }
 
         for (int a = 0; a < attempts; ++a) {
             int choice;
-            cout << "Enter your choice for attempt " << a + 1 << ": ";
-            cin >> choice;
-            cin.ignore();
-
-            // Validate input
-            if (choice < 1 || choice > options.size()) {
-                cout << "Invalid choice. Please enter a valid option number." << endl;
-                --a; // Repeat the current attempt
-                continue;
+            while (true) {
+                cout << "Enter your choice for attempt " << a + 1 << ": ";
+                try {
+                    cin >> choice;
+                    if (cin.fail() || choice < 1 || choice > options.size())
+                        throw invalid_argument("Invalid input");
+                    break;
+                } catch (const invalid_argument&) {
+                    cout << "Invalid input. Please enter a valid option number.\n";
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
             }
 
             currentAnswers.push_back(choice);
@@ -317,9 +330,19 @@ public:
 
     vector<pair<string, pair<vector<string>, int>>> questions;
     int numQuestions;
-    cout << "Enter number of questions: ";
-    cin >> numQuestions;
-    cin.ignore();
+    while (true) {
+        cout << "Enter number of questions: ";
+        try {
+            cin >> numQuestions;
+            if (cin.fail()) throw invalid_argument("Invalid input");
+            cin.ignore();
+            break;
+        } catch (const invalid_argument&) {
+            cout << "Invalid input. Please enter a valid number.\n";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+    }
 
     for (int i = 0; i < numQuestions; ++i) {
       string question;
@@ -337,16 +360,19 @@ public:
 
       int correctOption;
       if (quizType == "SCQ") {
-        cout << "Enter the correct option number (1): ";
-        cin >> correctOption;
-        cin.ignore();
-
-        // Validate input for SCQ (always 1 for SCQ)
-        if (correctOption > 4 || correctOption < 1) {
-          cout << "Invalid correct option for SCQ. Please re-enter the "
-                  "question.\n";
-          --i;
-          continue;
+        while (true) {
+            cout << "Enter the correct option number (1-4): ";
+            try {
+                cin >> correctOption;
+                if (cin.fail() || correctOption < 1 || correctOption > 4)
+                    throw invalid_argument("Invalid input");
+                cin.ignore();
+                break;
+            } catch (const invalid_argument&) {
+                cout << "Invalid input. Please enter a valid option number.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
         }
       }
       if (quizType == "MCQ") {
@@ -354,16 +380,36 @@ public:
         // Validate input for MCQ
 
         int number;
-        cout << "Enter the number of options for this question: ";
-        cin >> number;
+        while (true) {
+            cout << "Enter the number of correct options: ";
+            try {
+                cin >> number;
+                if (cin.fail() || number < 1 || number > 4)
+                    throw invalid_argument("Invalid input");
+                cin.ignore();
+                break;
+            } catch (const invalid_argument&) {
+                cout << "Invalid input. Please enter a valid number between 1 and 4.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+        }
+
         for (int i = 0; i < number; i++) {
           int correct;
-          cout << "Enter the correct option number (1 to 4): ";
-          cin >> correct;
-          if (correct < 1 || correct > 4) {
-            cout << "Invalid correct option. Please re-enter the question.\n";
-            number += 1;
-            continue;
+          while (true) {
+              cout << "Enter the correct option number (1-4): ";
+              try {
+                  cin >> correct;
+                  if (cin.fail() || correct < 1 || correct > 4)
+                      throw invalid_argument("Invalid input");
+                  cin.ignore();
+                  break;
+              } catch (const invalid_argument&) {
+                  cout << "Invalid input. Please enter a valid option number.\n";
+                  cin.clear();
+                  cin.ignore(numeric_limits<streamsize>::max(), '\n');
+              }
           }
           if (i == 0) {
             correctOption = correct;
@@ -371,7 +417,6 @@ public:
             correctOption *= 10;
             correctOption += correct;
           }
-          cin.ignore();
         }
       }
 
@@ -653,63 +698,68 @@ public:
     int choice;
     while (true) {
       user->menu();
-      cout << "Enter choice: ";
-      if (cin >> choice) {
-        if (choice == 0) {
-          cout << "Logging out...\n";
-          break;
-        }
+      while (true) {
+          cout << "Enter choice: ";
+          try {
+              cin >> choice;
+              if (cin.fail())
+                  throw invalid_argument("Invalid input");
+              break;
+          } catch (const invalid_argument&) {
+              cout << "Invalid input. Please enter a valid number.\n";
+              cin.clear();
+              cin.ignore(numeric_limits<streamsize>::max(), '\n');
+          }
+      }
+      if (choice == 0) {
+        cout << "Logging out...\n";
+        break;
+      }
 
-        if (Teacher *teacher = dynamic_cast<Teacher *>(user)) {
-          if (choice == 1) {
-            teacher->createQuiz();
-          } else if (choice == 2) {
-            teacher->viewQuizzes();
-          } else if (choice == 3) {
-            teacher->enrollStudent(users); // Pass users map
-          } else if (choice == 4) {
-            teacher->viewEnrolledStudents(); // New option
-          } else if (choice == 5) {
-            teacher->createQuizWithAI(); // New option handling
-          } else {
-            cout << "Invalid choice.\n";
-          }
-        } else if (Admin *admin = dynamic_cast<Admin *>(user)) {
-          if (choice == 1) {
-            admin->manageUsers();
-          } else if (choice == 2) {
-            admin->addTeacher(users);
-          } else if (choice == 3) {
-            admin->addStudent(users);
-          } else {
-            cout << "Invalid choice.\n";
-          }
-        } else if (Student *student = dynamic_cast<Student *>(user)) {
-          if (choice == 1) {
-            string quizTitle;
-            cout << "Enter the quiz title: ";
-            cin.ignore();
-            getline(cin, quizTitle);
-            student->takeQuiz(quizTitle, users);
-          } else if (choice == 2) {
-            student->viewScores(); // View scores
-          } else if (choice == 3) {
-            student->viewEnrolledCourses(); // New option
-          } else if (choice == 4) {
-            string quizTitle;
-            cout << "Enter the quiz title to display: ";
-            cin.ignore();
-            getline(cin, quizTitle);
-            student->displayQuiz(quizTitle);
-          } else {
-            cout << "Invalid choice.\n";
-          }
+      if (Teacher *teacher = dynamic_cast<Teacher *>(user)) {
+        if (choice == 1) {
+          teacher->createQuiz();
+        } else if (choice == 2) {
+          teacher->viewQuizzes();
+        } else if (choice == 3) {
+          teacher->enrollStudent(users); // Pass users map
+        } else if (choice == 4) {
+          teacher->viewEnrolledStudents(); // New option
+        } else if (choice == 5) {
+          teacher->createQuizWithAI(); // New option handling
+        } else {
+          cout << "Invalid choice.\n";
         }
-      } else {
-        // Handle invalid input
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "Invalid input. Please enter a number.\n";
+      } else if (Admin *admin = dynamic_cast<Admin *>(user)) {
+        if (choice == 1) {
+          admin->manageUsers();
+        } else if (choice == 2) {
+          admin->addTeacher(users);
+        } else if (choice == 3) {
+          admin->addStudent(users);
+        } else {
+          cout << "Invalid choice.\n";
+        }
+      } else if (Student *student = dynamic_cast<Student *>(user)) {
+        if (choice == 1) {
+          string quizTitle;
+          cout << "Enter the quiz title: ";
+          cin.ignore();
+          getline(cin, quizTitle);
+          student->takeQuiz(quizTitle, users);
+        } else if (choice == 2) {
+          student->viewScores(); // View scores
+        } else if (choice == 3) {
+          student->viewEnrolledCourses(); // New option
+        } else if (choice == 4) {
+          string quizTitle;
+          cout << "Enter the quiz title to display: ";
+          cin.ignore();
+          getline(cin, quizTitle);
+          student->displayQuiz(quizTitle);
+        } else {
+          cout << "Invalid choice.\n";
+        }
       }
     }
   }
@@ -755,23 +805,27 @@ int main() {
         cout << "Quiz Management System\n";
         cout << "1. Login\n";
         cout << "2. Exit\n";
-        cout << "Enter choice: ";
-        if (cin >> choice) {
-            if (choice == 1) {
-                system.login();
-            } else if (choice == 2) {
-                system.save_data();
-                save_quizzes();
+        while (true) {
+            cout << "Enter choice: ";
+            try {
+                cin >> choice;
+                if (cin.fail())
+                    throw invalid_argument("Invalid input");
                 break;
-            } else {
-                cout << "Invalid choice. Try again.\n";
+            } catch (const invalid_argument&) {
+                cout << "Invalid input. Please enter a valid number.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
+        }
+        if (choice == 1) {
+            system.login();
+        } else if (choice == 2) {
+            system.save_data();
+            save_quizzes();
+            break;
         } else {
-            // Invalid input encountered
-            cin.clear(); // Clear error flags
-            cin.ignore(numeric_limits<streamsize>::max(),
-                       '\n'); // Discard invalid input
-            cout << "Invalid input. Please enter a number.\n";
+            cout << "Invalid choice. Try again.\n";
         }
     }
     return 0;
